@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Километраж и расход</title>
+<style>
+:root{--bg:#e6e8ec;--card:#f7f8fa;--ink:#1f2329;--mute:#677082;--line:#d0d4db;--sign:#f5c400;--err:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#13161a;--card:#1e2228;--ink:#eceef1;--mute:#9aa1ae;--line:#323842;--err:#ff8a80}}
+:root[data-theme="dark"]{--bg:#13161a;--card:#1e2228;--ink:#eceef1;--mute:#9aa1ae;--line:#323842;--err:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:110px}
+main{max-width:520px;margin:0 auto;padding:16px 14px 0}
+h1{font-size:1.25rem;margin:2px 2px 14px;letter-spacing:-.01em}
+.dash{background:linear-gradient(165deg,#272c35,#101317);color:#f3f4f6;border-radius:20px;padding:18px 16px 16px;margin-bottom:14px;box-shadow:0 10px 28px rgba(0,0,0,.22)}
+.gauge{position:relative;max-width:300px;margin:0 auto}
+.gauge svg{display:block;width:100%;height:auto}
+.trk,.val{fill:none;stroke-width:14;stroke-linecap:round}
+.trk{stroke:rgba(255,255,255,.12)}
+.val{stroke:var(--sign);transition:stroke-dasharray .35s ease,opacity .2s}
+.tk{fill:#f3f4f6;opacity:.55;font-size:9px;font-family:inherit}
+.gv{position:absolute;left:0;right:0;bottom:12%;text-align:center;line-height:1}
+.gv span{font-variant-numeric:tabular-nums;font-size:3rem;font-weight:700;color:var(--sign);letter-spacing:-.02em}
+.gv small{display:block;font-size:.8rem;opacity:.65;margin-top:4px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.pair div{background:rgba(255,255,255,.07);border-radius:12px;padding:10px 12px}
+.pair b{display:block;font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:600;line-height:1.1}
+.pair span{font-size:.78rem;opacity:.65}
+.lane{height:4px;margin-top:16px;border-radius:2px;background:repeating-linear-gradient(90deg,var(--sign) 0 18px,transparent 18px 32px);background-size:32px 4px}
+.lane.go{animation:drive .6s linear 1}
+@keyframes drive{to{background-position:-96px 0}}
+@media (prefers-reduced-motion:reduce){.lane.go{animation:none}.val{transition:none}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.wide{grid-column:1/-1}
+label{font-size:.85rem;color:var(--mute)}
+.inp{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:0 12px;min-height:52px}
+.inp:focus-within{border-color:var(--sign);box-shadow:0 0 0 3px rgba(245,196,0,.3)}
+.inp input{flex:1;min-width:0;font:inherit;font-size:1.2rem;color:var(--ink);background:none;border:0;padding:12px 0;outline:0}
+.inp i{font-style:normal;color:var(--mute);font-size:.85rem;padding-left:6px}
+.bar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));background:var(--bg);background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
+.bar>div{max-width:520px;margin:0 auto}
+.err{color:var(--err);font-size:.85rem;margin:0 0 6px;min-height:0}
+.err:empty{display:none}
+#add{font:inherit;cursor:pointer;border:0;border-radius:14px;background:var(--sign);color:#1f2329;width:100%;min-height:54px;font-size:1.05rem;font-weight:700}
+#add:active{transform:scale(.99)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+h2{font-size:1.05rem;margin:0}
+.ghost{font:inherit;cursor:pointer;background:none;color:var(--mute);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:40px;font-size:.85rem}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:6px}
+.sum div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
+.sum b{display:block;font-variant-numeric:tabular-nums;font-size:1.2rem}
+.sum span{font-size:.75rem;color:var(--mute)}
+.day{display:flex;justify-content:space-between;gap:8px;margin:16px 0 4px;font-size:.85rem;color:var(--mute);font-variant-numeric:tabular-nums}
+.day b{color:var(--ink)}
+.trip{display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.time{background:var(--bg);border-radius:9px;padding:6px 9px;font-weight:700}
+.km{font-weight:600}
+.fl{color:var(--mute)}
+.del{width:40px;height:40px;border-radius:10px;border:0;background:none;color:var(--mute);font-size:1.1rem;cursor:pointer}
+.empty{color:var(--mute);margin:8px 0 0}
+#logPanel{scroll-margin-top:12px}
+.flip{display:inline-block;animation:flip .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes flip{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.trip.new{overflow:hidden;animation:pop .55s cubic-bezier(.2,.9,.25,1.12) .3s backwards}
+.trip.new .time{animation:flash 1.6s ease-out .3s backwards}
+@keyframes pop{from{opacity:0;max-height:0;padding-top:0;padding-bottom:0;transform:translateY(-14px) scale(.96)}to{opacity:1;max-height:80px;transform:none}}
+@keyframes flash{from{background:var(--sign);color:#1f2329}to{background:var(--bg);color:var(--ink)}}
+@media (prefers-reduced-motion:reduce){.flip,.trip.new,.trip.new .time{animation:none}}
+@media (max-width:380px){.gv span{font-size:2.5rem}.row{gap:10px}.trip{gap:8px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Километраж и расход</h1>
+
+<section class="dash" aria-live="polite">
+  <div class="gauge">
+    <svg viewBox="0 0 200 112" aria-hidden="true">
+      <path class="trk" d="M20 100 A80 80 0 0 1 180 100" pathLength="100"/>
+      <path class="val" id="arc" d="M20 100 A80 80 0 0 1 180 100" pathLength="100" stroke-dasharray="0 100" style="opacity:0"/>
+      <text class="tk" x="12" y="111">0</text>
+      <text class="tk" id="gMax" x="188" y="111" text-anchor="end">10</text>
+    </svg>
+    <div class="gv"><span id="rFuel">0</span><small>литров на поездку</small></div>
+  </div>
+  <div class="pair">
+    <div><b id="rKm">0</b><span>километров</span></div>
+    <div><b id="rTime">—</b><span>вернулся в</span></div>
+  </div>
+  <div class="lane" id="lane"></div>
+</section>
+
+<section class="panel">
+  <div class="row">
+    <div class="f wide"><label for="km">Километраж</label><div class="inp"><input id="km" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" min="0" step="0.1" placeholder="120"><i>км</i></div></div>
+    <div class="f"><label for="h">Часы (0–23)</label><div class="inp"><input id="h" type="text" maxlength="2" inputmode="numeric" enterkeyhint="next" autocomplete="off" min="0" max="23" step="1" placeholder="18"><i>ч</i></div></div>
+    <div class="f"><label for="m">Минуты (0–59)</label><div class="inp"><input id="m" type="text" maxlength="2" inputmode="numeric" enterkeyhint="done" autocomplete="off" min="0" max="59" step="1" placeholder="30"><i>мин</i></div></div>
+    <div class="f wide"><label for="cons">Расход</label><div class="inp"><input id="cons" type="text" inputmode="decimal" autocomplete="off" min="0" step="0.1" value="17"><i>л на 100 км</i></div></div>
+  </div>
+</section>
+
+<section class="panel" id="logPanel">
+  <div class="hd"><h2>Поездки</h2><button class="ghost" id="clear" type="button">Очистить всё</button></div>
+  <div class="sum" id="sum"><div><b id="sN">0</b><span>поездок</span></div><div><b id="sK">0</b><span>километров</span></div><div><b id="sL">0</b><span>литров</span></div></div>
+  <div id="list"></div>
+</section>
+</main>
+
+<div class="bar"><div>
+  <p class="err" id="err" role="alert">Скрипт не запущен: в этом браузере страница не работает</p>
+  <button id="add" type="button">Добавить поездку</button>
+</div></div>
+
+<script>
+window.onerror=function(m,u,l){var e=document.getElementById("err");if(e)e.textContent="Ошибка: "+m+" (строка "+l+")"};
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  $("err").textContent="";
+  var newIdx=-1,trips=[],KEY="mileage-trips",STEPS=[10,20,50,100,200,500,1000,5000];
+  try{var s=localStorage.getItem(KEY);if(s)trips=JSON.parse(s)||[]}catch(e){}
+  try{var c=localStorage.getItem("mileage-cons");if(c)$("cons").value=c}catch(e){}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(trips));localStorage.setItem("mileage-cons",$("cons").value)}catch(e){}}
+  function num(id){var v=parseFloat(String($(id).value).replace(",","."));return isFinite(v)&&v>0?v:0}
+  function f(n,d){return n.toLocaleString("ru-RU",{maximumFractionDigits:d===undefined?1:d})}
+  var reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function tween(el,to,d){
+    var from=el._shown||0;
+    if(el._raf&&window.cancelAnimationFrame)cancelAnimationFrame(el._raf);
+    clearTimeout(el._to);
+    var done=function(){el._shown=to;el.textContent=f(to,d)};
+    if(reduce||from===to||!window.requestAnimationFrame){done();return}
+    var t0=Date.now();
+    el._to=setTimeout(done,550);
+    (function step(){var k=Math.min(1,(Date.now()-t0)/450);if(k>=1){done();return}var e=1-Math.pow(1-k,3);el._shown=from+(to-from)*e;el.textContent=f(el._shown,d);el._raf=requestAnimationFrame(step)})();
+  }
+  function swap(el,text){
+    if(el.textContent===text)return;
+    el.textContent=text;
+    if(reduce)return;
+    el.classList.remove("flip");void el.offsetWidth;el.classList.add("flip");
+  }
+  function sumTo(n,k,l){tween($("sN"),n,0);tween($("sK"),k,1);tween($("sL"),l,1)}
+  function pad(n){return (n<10?"0":"")+n}
+  function clock(h,m){return pad(h)+":"+pad(m)}
+  function calc(km,c){return {fuel:km*(c||num("cons"))/100}}
+  function clamp(id,max){var el=$(id);if(el.value==="")return;var v=Math.floor(+el.value);if(!(v>=0))v=0;if(v>max)v=max;if(+el.value!==v)el.value=v}
+  function live(){
+    var km=num("km"),h=$("h").value,m=$("m").value,fuel=km?calc(km).fuel:0;
+    tween($("rFuel"),fuel,1);
+    tween($("rKm"),km,1);
+    swap($("rTime"),(h===""||m==="")?"—":clock(+h,+m));
+    var max=STEPS[STEPS.length-1];for(var i=0;i<STEPS.length;i++){if(fuel<=STEPS[i]){max=STEPS[i];break}}
+    $("gMax").textContent=max;
+    var arc=$("arc"),p=Math.min(100,fuel/max*100);
+    arc.style.opacity=fuel>0?1:0;arc.setAttribute("stroke-dasharray",p+" 100");
+  }
+  function today(){return new Date().toLocaleDateString("ru-RU")}
+  function render(){
+    var L=$("list");L.innerHTML="";
+    if(!trips.length){L.innerHTML='<p class="empty">Пока пусто. Введите километраж и время возвращения, потом добавьте поездку.</p>';sumTo(0,0,0);return}
+    var tk=0,tf=0,order=[],groups={};
+    for(var i=trips.length-1;i>=0;i--){var d=trips[i].date||"Без даты";if(!groups[d]){groups[d]=[];order.push(d)}groups[d].push(i)}
+    order.forEach(function(d){
+      var head=document.createElement("div");head.className="day";head.innerHTML="<b></b><span></span>";
+      L.appendChild(head);var dk=0,df=0;
+      groups[d].forEach(function(i){
+        var t=trips[i],r=calc(t.km,t.cons);dk+=t.km;df+=r.fuel;
+        var row=document.createElement("div");row.className="trip"+(i===newIdx?" new":"");
+        row.innerHTML='<span class="time"></span><span class="km"></span><span class="fl"></span><button class="del" type="button" aria-label="Удалить поездку">✕</button>';
+        row.children[0].textContent=t.time||"—:—";
+        row.children[1].textContent=f(t.km)+" км";
+        row.children[2].textContent=f(r.fuel)+" л";
+        row.children[3].onclick=function(){trips.splice(i,1);save();render()};
+        L.appendChild(row);
+      });
+      tk+=dk;tf+=df;
+      head.children[0].textContent=(d===today()?"Сегодня, ":"")+d;
+      head.children[1].textContent=f(dk)+" км · "+f(df)+" л";
+    });
+    sumTo(trips.length,tk,tf);
+  }
+  $("cons").parentNode&&0;
+  ["cons","km","h","m"].forEach(function(id){var h2=function(e){
+    var el=$(id),v=el.value;
+    if(id==="km"||id==="cons"){v=v.replace(/[^0-9.,]/g,"");var p=v.search(/[.,]/);if(p>-1)v=v.slice(0,p+1)+v.slice(p+1).replace(/[.,]/g,"")}
+    else v=v.replace(/\D/g,"");
+    if(v!==el.value)el.value=v;
+    if(id==="h"){clamp("h",23);if(e&&e.type==="input"&&$("h").value.length>=2)$("m").focus()}
+    if(id==="m")clamp("m",59);
+    live();save()};
+    ["input","keyup","change"].forEach(function(ev){$(id).addEventListener(ev,h2)})});
+  function add(){
+    var km=num("km"),h=$("h").value,m=$("m").value;
+    if(!km){$("err").textContent="Введите километраж больше нуля.";$("km").focus();return}
+    if(h===""||m===""){$("err").textContent="Укажите, во сколько вернулись.";(h===""?$("h"):$("m")).focus();return}
+    $("err").textContent="";
+    trips.push({km:km,time:clock(+h,+m),date:today(),cons:num("cons")});newIdx=trips.length-1;save();render();newIdx=-1;
+    var l=$("lane");l.classList.remove("go");void l.offsetWidth;l.classList.add("go");
+    $("km").value=$("h").value=$("m").value="";live();$("logPanel").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+  }
+  $("add").onclick=add;
+  $("m").addEventListener("keydown",function(e){if(e.key==="Enter")add()});
+  $("clear").onclick=function(){if(trips.length&&confirm("Удалить все поездки?")){trips=[];save();render()}};
+  live();render();
+})();
+</script>
+</body>
+</html>
